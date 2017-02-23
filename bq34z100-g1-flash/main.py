@@ -22,7 +22,7 @@ import time
 FUEL_GAUGE_ADDRESS = 0x55
 
 # Device switches i2c address when in ROM mode
-ROM_ADDRESS = 0x0b
+ROM_ADDRESS = 0x0B
 
 def flash_image(image_in, port=1):
     """Main function to flash an .srec image to the fuel gauge
@@ -60,14 +60,28 @@ def mass_erase_data_flash(bus):
         bus (SMBus): A handle to the SMBus object to interface with the i2c
 
     Returns:
-        None
+        checksum (byte): The computed checksum to be used for the data writing
+
     """
+    # Note that the device address has changed now, since it is ROM mode
     print("Starting mass erase data flash...")
     
+    # Control 0x00
+    write_byte_data(0x00, 0x0C, ROM_ADDRESS)
 
+    # RemainingCapacity 0x04/0x05
+    write_byte_data(0x04, 0x83, ROM_ADDRESS)
+    write_byte_data(0x05, 0xDE, ROM_ADDRESS)
+    
+    # Compute the checksum
+    checksum = (0x0C + 0x83 + 0xDE) % 0x010000
 
+    # DoD@EoC 0x64/0x65
+    write_byte_data(0x64, (checksum % 0x0100), ROM_ADDRESS)
+    write_byte_data(0x65, (checksum / 0x0100), ROM_ADDRESS)
 
-
+    # Wait half a second before beginning to write
+    wait(0.5)
 
 def is_valid_image_file(file_in):
     """Checks the user provided path to the firmware image to see if it is valid
