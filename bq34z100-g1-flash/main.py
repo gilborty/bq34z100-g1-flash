@@ -4,6 +4,8 @@
 
 This module flashes firmware on to the TI bq34z100-g1 fuel gauge for use in the OpenROV Trident
 
+Reference documentation: http://www.ti.com/lit/an/slua665/slua665.pdf
+
 Example:
 	$ python main.py [-f | --flash] [path to image.srec]
 
@@ -19,7 +21,7 @@ import time
 # Script wide vars
 FUEL_GAUGE_ADDRESS = 0x55
 
-# Deive switches i2c address when in ROM mode
+# Device switches i2c address when in ROM mode
 ROM_ADDRESS = 0x0b
 
 def flash_image(image_in, port=1):
@@ -47,6 +49,23 @@ def flash_image(image_in, port=1):
 
     # Put the device into ROM Mode
     put_device_into_rom_mode(bus)
+
+    # mass erase data flash
+    mass_erase_data_flash(bus)
+
+def mass_erase_data_flash(bus):
+    """Mass erases data flash as per the TI documentation
+
+    Args:
+        bus (SMBus): A handle to the SMBus object to interface with the i2c
+
+    Returns:
+        None
+    """
+    print("Starting mass erase data flash...")
+    
+
+
 
 
 
@@ -86,15 +105,15 @@ def put_device_into_rom_mode(bus):
     control_reg = 0x00
    
     # Init?
-    write_block_data(bus, FUEL_GAUGE_ADDRESS, control_reg, output_values)
-    write_block_data(bus, FUEL_GAUGE_ADDRESS, control_reg, output_values)
+    write_block_data(bus, control_reg, output_values, FUEL_GAUGE_ADDRESS)
+    write_block_data(bus, control_reg, output_values, FUEL_GAUGE_ADDRESS)
     
     # Wait for 0.2 seconds
     wait(0.2)
 
     # Write more
     output_values_2 = [0x0f, 0x00]
-    write_block_data(bus, FUEL_GAUGE_ADDRESS, control_reg, output_values_2)
+    write_block_data(bus, control_reg, output_values_2, FUEL_GAUGE_ADDRESS)
 
     # Wait more
     wait(0.2)
@@ -130,20 +149,32 @@ def wait(sec):
     """
     time.sleep(sec)
 
-def write_block_data(bus, device, register, values):
-    """Wrapper over the SMBus write block data to conform with the TI documentation for endianess
+def write_block_data(bus, register, values, device):
+    """Wrapper over the SMBus write block data to conform with the TI documentation
 
     Args: 
         bus (SMBus): A handle to the i2c interface
-        device (hex): The device i2c address
         register (hex): The register to write to
-        values (list): The hex values to write to the devive register
+        values (list): The bytes to write to the devive register
+        device (hex): The device i2c address
 
     Returns:
         None
     """
     bus.write_i2c_block_data(device, register, swapbytes(values))
 
+def write_byte_data(bus, register, value, device):
+    """Wrapper over the SMBus write byte data to conform with the TI documentation
+
+    Args:
+        bus (SMBus): A handle to the i2c interface
+        register (hex): The register to write to
+        values (list): The byte to write to the devive register
+        device (hex): The device i2c address
+    Returns:
+        None
+    """
+    bus.write_byte_data(device, register, value)
 
 def main():
     """Main function, the main entry point to the script
