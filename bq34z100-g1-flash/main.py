@@ -24,20 +24,20 @@ FUEL_GAUGE_ADDRESS = 0x55
 # Device switches i2c address when in ROM mode
 ROM_ADDRESS = 0x0B
 
-def execute_gas_gauge_program():
+def execute_gas_gauge_program(bus):
     """Last step in the flashing process. Starts the TI gas gauge program
 
     Args:
-        None
+        bus (SMBus): Handle to the SMBus object to interface with the i2c
     Returns: 
         None
     """
     # Control 0x00
-    write_byte_data(0x00, 0x0F, ROM_ADDRESS)
+    write_byte_data(bus, 0x00, 0x0F, ROM_ADDRESS)
 
     # DoD@EoC 0x64/0x65
-    write_byte_data(0x64, 0x0F, ROM_ADDRESS)
-    write_byte_data(0x65, 0x00, ROM_ADDRESS)
+    write_byte_data(bus, 0x64, 0x0F, ROM_ADDRESS)
+    write_byte_data(bus, 0x65, 0x00, ROM_ADDRESS)
 
 def flash_image(image_in, port=1):
     """Main function to flash an .srec image to the fuel gauge
@@ -69,10 +69,10 @@ def flash_image(image_in, port=1):
     checksum = mass_erase_data_flash(bus)
 
     # Write each row of the srec file to the device
-    write_image(image_in, checksum)
+    write_image(image_in, bus, checksum)
     
     # Execute the gas gauge program
-    execute_gas_gauge_program()
+    execute_gas_gauge_program(bus)
 
 def get_image(path_to_image):
     """Puts the data from an .srec file into a list for consumption
@@ -107,18 +107,18 @@ def mass_erase_data_flash(bus):
     print("Starting mass erase data flash...")
     
     # Control 0x00
-    write_byte_data(0x00, 0x0C, ROM_ADDRESS)
+    write_byte_data(bus, 0x00, 0x0C, ROM_ADDRESS)
 
     # RemainingCapacity 0x04/0x05
-    write_byte_data(0x04, 0x83, ROM_ADDRESS)
-    write_byte_data(0x05, 0xDE, ROM_ADDRESS)
+    write_byte_data(bus, 0x04, 0x83, ROM_ADDRESS)
+    write_byte_data(bus, 0x05, 0xDE, ROM_ADDRESS)
     
     # Compute the checksum
     checksum = (0x0C + 0x83 + 0xDE) % 0x010000
 
     # DoD@EoC 0x64/0x65
-    write_byte_data(0x64, (checksum % 0x0100), ROM_ADDRESS)
-    write_byte_data(0x65, (checksum / 0x0100), ROM_ADDRESS)
+    write_byte_data(bus, 0x64, (checksum % 0x0100), ROM_ADDRESS)
+    write_byte_data(bus, 0x65, (checksum / 0x0100), ROM_ADDRESS)
 
     # Wait half a second before beginning to write
     wait(0.5)
@@ -232,7 +232,7 @@ def write_byte_data(bus, register, value, device):
     """
     bus.write_byte_data(device, register, value)
 
-def write_image(path_to_image, checksum):
+def write_image(path_to_image, bus, checksum):
     """Writes the data, row by row, from the srec file to the device. 
 
     Args: 
@@ -246,6 +246,32 @@ def write_image(path_to_image, checksum):
     # Put the image file data into a list to process
     image_data = get_image_data(path_to_image)
 
+    # Iterate through the data
+    for row_index, row in enumerate(image_data):
+        
+        # Program row command
+        write_byte_data(bus, 0x00, 0x0A, ROM_ADDRESS)
+
+        # Write target row to the row low register
+        write_byte_data(bus, 0x01, hex(row_index), ROM_ADDRESS)
+        checksum = (0x0A + row_index) % 0x010000
+
+        # Copy data from the full array to the row array
+        for i in range(0, 31):
+            # Do stuff
+            pass
+
+        # Write the row data registers
+
+        # Write the row
+        # DoD@EoC 0x64/0x65
+        write_byte_data(bus, 0x64, (checksum % 0x0100), ROM_ADDRESS)
+        write_byte_data(bus, 0x65, (checksum / 0x0100), ROM_ADDRESS)
+
+        # Wait for 0.4 seconds
+        
+
+                
 def main():
     """Main function, the main entry point to the script
     
