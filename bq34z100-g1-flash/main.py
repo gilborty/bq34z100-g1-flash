@@ -88,7 +88,7 @@ def get_image(path_to_image):
     with open(path_to_image) as f:
         data = f.readlines()
 
-    # Clean (basically strip \r \n
+    # Clean (basically strip \r \n)
     data = [x.strip() for x in data]
     
     return data
@@ -268,7 +268,8 @@ def write_image(path_to_image, bus, checksum):
         write_byte_data(bus, 0x64, (checksum % 0x0100), ROM_ADDRESS)
         write_byte_data(bus, 0x65, (checksum / 0x0100), ROM_ADDRESS)
 
-        # Wait for 0.4 seconds
+        # Wait for 12 milliseconds (as per logic analyzer during flash from TI Battery Studio program)
+
         
 
                 
