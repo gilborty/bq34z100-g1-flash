@@ -24,6 +24,21 @@ FUEL_GAUGE_ADDRESS = 0x55
 # Device switches i2c address when in ROM mode
 ROM_ADDRESS = 0x0B
 
+def execute_gas_gauge_program():
+    """Last step in the flashing process. Starts the TI gas gauge program
+
+    Args:
+        None
+    Returns: 
+        None
+    """
+    # Control 0x00
+    write_byte_data(0x00, 0x0F, ROM_ADDRESS)
+
+    # DoD@EoC 0x64/0x65
+    write_byte_data(0x64, 0x0F, ROM_ADDRESS)
+    write_byte_data(0x65, 0x00, ROM_ADDRESS)
+
 def flash_image(image_in, port=1):
     """Main function to flash an .srec image to the fuel gauge
 
@@ -51,7 +66,18 @@ def flash_image(image_in, port=1):
     put_device_into_rom_mode(bus)
 
     # mass erase data flash
-    mass_erase_data_flash(bus)
+    checksum = mass_erase_data_flash(bus)
+
+    # Write each row of the srec file to the device
+    write_image(image_in, checksum)
+    
+    # Execute the gas gauge program
+    execute_gas_gauge_program()
+
+def get_image(path_to_image):
+    """
+    """
+    pass
 
 def mass_erase_data_flash(bus):
     """Mass erases data flash as per the TI documentation
@@ -82,6 +108,8 @@ def mass_erase_data_flash(bus):
 
     # Wait half a second before beginning to write
     wait(0.5)
+    
+    return checksum
 
 def is_valid_image_file(file_in):
     """Checks the user provided path to the firmware image to see if it is valid
@@ -189,6 +217,20 @@ def write_byte_data(bus, register, value, device):
         None
     """
     bus.write_byte_data(device, register, value)
+
+def write_image(path_to_image, checksum):
+    """Writes the data, row by row, from the srec file to the device. 
+
+    Args: 
+        image (string): the path to the image file
+        checksum (byte): The computed checksum from the mass erase data flash
+    
+    Returns: 
+        None
+    """
+
+    # Put the image file data into a list to process
+    image_data = get_image_data(path_to_image)
 
 def main():
     """Main function, the main entry point to the script
