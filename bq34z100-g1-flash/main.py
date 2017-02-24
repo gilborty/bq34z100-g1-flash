@@ -249,6 +249,9 @@ def write_image(path_to_image, bus, checksum):
     # Iterate through the data
     for row_index, row in enumerate(image_data):
         
+        # Debug
+        print('Writing row: {}'.format(row_index))
+                
         # Program row command
         write_byte_data(bus, 0x00, 0x0A, ROM_ADDRESS)
 
@@ -257,11 +260,15 @@ def write_image(path_to_image, bus, checksum):
         checksum = (0x0A + row_index) % 0x010000
 
         # Copy data from the full array to the row array
+        row_data = []
         for i in range(0, 31):
-            # Do stuff
-            pass
-
+            row_data.append(image_data[(row_index * 32) + i])
+            checksum = (checksum + row_data[i]) % 0x010000
+ 
         # Write the row data registers
+        # TODO: Worry about endianess?
+        # Also, should this be in a loop?
+        bus.write_i2c_block_data(ROM_ADDRESS, 0x04, row_data)        
 
         # Write the row
         # DoD@EoC 0x64/0x65
@@ -269,9 +276,10 @@ def write_image(path_to_image, bus, checksum):
         write_byte_data(bus, 0x65, (checksum / 0x0100), ROM_ADDRESS)
 
         # Wait for 12 milliseconds (as per logic analyzer during flash from TI Battery Studio program)
-
-        
-
+        wait(0.012)
+    
+    # Done
+    print('Finished data flash.')
                 
 def main():
     """Main function, the main entry point to the script
