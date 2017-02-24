@@ -75,9 +75,23 @@ def flash_image(image_in, port=1):
     execute_gas_gauge_program()
 
 def get_image(path_to_image):
+    """Puts the data from an .srec file into a list for consumption
+
+    Args:
+        path_to_image (string): The path to the image file
+
+    Returns:
+        image (list): The processed data from the image file
     """
-    """
-    pass
+
+    # Open the image to read
+    with open(path_to_image) as f:
+        data = f.readlines()
+
+    # Clean (basically strip \r \n
+    data = [x.strip() for x in data]
+    
+    return data
 
 def mass_erase_data_flash(bus):
     """Mass erases data flash as per the TI documentation
